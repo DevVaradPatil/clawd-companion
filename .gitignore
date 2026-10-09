@@ -1,0 +1,16 @@
+# The Claude Mascot Pack art is licensed by getillustrations.com and is NOT redistributed here.
+# Each user downloads it; the mod compiles it on their machine at startup.
+PNG/
+SVG/
+Source/
+*.ai
+mascot-pack/
+
+# written by Claude Code when it loads the mod
+clawd-bar/.claude-plugin/types/
+
+# local previews
+preview.html
+docs/*.html
+.claude/
+node_modules/

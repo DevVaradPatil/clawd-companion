@@ -1,0 +1,14 @@
+{
+  "name": "clawd-companion",
+  "owner": {
+    "name": "DevVaradPatil"
+  },
+  "description": "clawd-bar: Claude's pixel mascot and a slim stats bar above the prompt in the Claude Code desktop app.",
+  "plugins": [
+    {
+      "name": "clawd-bar",
+      "source": "./clawd-bar",
+      "description": "Claude's pixel mascot lives above your prompt in the Claude Code desktop app and acts out whatever Claude is doing, in front of context, usage limits and the turn clock."
+    }
+  ]
+}

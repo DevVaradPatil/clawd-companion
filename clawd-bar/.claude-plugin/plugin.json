@@ -1,0 +1,7 @@
+{
+  "name": "clawd-bar",
+  "version": "0.2.0",
+  "description": "A slim bar above the prompt in the Claude Code desktop app: context (coloured by what fills it), 5h and weekly limits and the turn clock, with Claude's pixel mascot roaming in front and posing for each tool Claude runs. Click or hover it.",
+  "license": "MIT",
+  "keywords": ["mascot", "status", "context", "usage", "pixel-art", "desktop"]
+}
