@@ -95,12 +95,13 @@ If the pack is somewhere else, run `/clawd pack <folder>` once. The first time, 
 | `/clawd compact` | Clawd only, no stats (run it again to bring them back) |
 | `/clawd size 1` · `1.5` · `2` | Clawd's size (the bar grows to fit) |
 | `/clawd pack <folder>` | Where the unzipped mascot pack is |
+| `/clawd motion on` · `auto` · `off` | Always move (default), follow your OS's reduced-motion setting, or stand still |
 | `/clawd poke` | Say hi |
 
 Settings are kept across sessions.
 
 **Light mode and reduced motion.** The bar follows your system's light or dark appearance.
-If your OS asks for reduced motion, Clawd stands still and the floating numbers stay off.
+With `/clawd motion auto`, Clawd stands still whenever your OS asks for reduced motion, and the floating numbers stay off. It isn't the default because Windows reports reduced motion whenever "Show animations" is off, which many people turn off for speed.
 
 ## How it works
 

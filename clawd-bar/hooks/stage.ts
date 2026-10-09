@@ -130,7 +130,9 @@ export type RenderOpts = {
   click?: { pose: string; say: string } // what a click on it does
   minis?: number // subagents running: half-size mascots trailing it
   hint?: string // drawn in the mascot's place when there is no art yet
+  motion?: Motion // on: always animate; auto: still when the OS asks for reduced motion; off: always still
 }
+export type Motion = 'on' | 'auto' | 'off'
 
 const MINI = 0.5
 const MAX_MINIS = 4
@@ -140,18 +142,21 @@ const LIGHT: [string, string][] = [
   ['#c2c0b6', '#3d3929'], ['#85837c', '#6f6b62'], ['#5e5c56', '#a19d93'], ['#353432', '#e6e2d8'], ['#ecebe6', '#29261b'],
   ['#30302e', '#ffffff'], ['#4a4843', '#d6d1c4'], ['#3a3936', '#d6d1c4'], ['#e8c468', '#b8860b'], ['#e5534b', '#c8372d'], ['#7ec699', '#2f855a'],
 ]
-const STYLE =
+const style = (motion: Motion = 'on') =>
   // the frame may wrap the SVG in a page: no margins, fill it exactly (else the feet get clipped)
   ':root{color-scheme:light dark;background:transparent}html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}svg{display:block;width:100%;height:100%}' +
   '#still{display:none}' +
   `@media (prefers-color-scheme:light){${LIGHT.map(([d, l]) => `[fill="${d}"]{fill:${l}}[stroke="${d}"]{stroke:${l}}`).join('')}}` +
   // reduced motion: a still mascot in place of the wandering one, no floating numbers
-  '@media (prefers-reduced-motion:reduce){#mover,.flash{display:none}#still{display:inline}}'
+  // still mode: a still mascot in place of the wandering one, no floating numbers. Not the default for `auto`'s
+  // sake alone: Windows reports reduced motion whenever "Show animations" is off, which many turn off for speed.
+  (motion === 'off' ? STILL : motion === 'auto' ? `@media (prefers-reduced-motion:reduce){${STILL}}` : '')
+const STILL = '#mover,.flash{display:none}#still{display:inline}'
 
 export const render = (scene: Seg[], width: number, opts: RenderOpts = {}): string => {
   if (!PACK) {
     const hint = opts.hint ? `<text x="${f(width - 12)}" y="${f(H / 2 + 5)}" font-size="12" ${MONO} fill="#85837c" text-anchor="end">${esc(opts.hint)}</text>` : ''
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(width)} ${H}" preserveAspectRatio="xMidYMax meet"><style>${STYLE}</style>${opts.hud ?? ''}${hint}</svg>`
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(width)} ${H}" preserveAspectRatio="xMidYMax meet"><style>${style(opts.motion)}</style>${opts.hud ?? ''}${hint}</svg>`
   }
   const SPRITES = PACK.sprites
   const WALK = PACK.walk
@@ -218,7 +223,7 @@ export const render = (scene: Seg[], width: number, opts: RenderOpts = {}): stri
   const first = scene[0]?.kind === 'pose' && scene[0].pose && SPRITES[scene[0].pose] ? art(SPRITES[scene[0].pose]!) : still()
   const stillOne = `<g id="still" transform="translate(${f(Math.max(HALF, width - HALF * 2))} ${GROUND})">${first}</g>`
   const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(width)} ${H}" preserveAspectRatio="xMidYMax meet">` +
-    `<style>${STYLE}</style>${opts.hud ?? ''}<g shape-rendering="crispEdges"><g id="mover">${mover}</g>${stillOne}</g></svg>`
+    `<style>${style(opts.motion)}</style>${opts.hud ?? ''}<g shape-rendering="crispEdges"><g id="mover">${mover}</g>${stillOne}</g></svg>`
   const off = Math.max(0, Math.round(opts.offsetMs ?? 0))
   return off ? out.replaceAll(`dur="${T}ms"`, `dur="${T}ms" begin="-${off}ms"`) : out
 }

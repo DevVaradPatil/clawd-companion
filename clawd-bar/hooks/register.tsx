@@ -2,7 +2,7 @@ import type { Hook, Register } from 'claude-code'
 import { WALK_FROM, compilePack, type Pack } from './compile.ts'
 import { CUES, PACK_NAMES, SAY, WORK, classify, type Cue, type Mood } from './poses.ts'
 import { DANGER, WARN, burnOf, hud, k, type Info, type Sample } from './hud.ts'
-import { at, busyMs, hasPack, pick, plan, react, render, setScale, stageH, usePack, type Mode, type Seg } from './stage.ts'
+import { at, busyMs, hasPack, pick, plan, react, render, setScale, stageH, usePack, type Mode, type Motion, type Seg } from './stage.ts'
 
 // clawd-bar: one bar above the prompt, drawn as ONE in-flow SVG: context, usage limits and the turn clock
 // behind, Claude's pixel mascot roaming in front, posing for whatever tool is running. Clicks and hovers on the
@@ -22,8 +22,9 @@ const PACK_URL = 'https://getillustrations.com/illustration-pack/claude-mascot-p
 const rng = Math.random
 
 // ---------- settings, kept across sessions in $.store ----------
-type Settings = { on: boolean; compact: boolean; size: number }
-let settings: Settings = { on: true, compact: false, size: 1 }
+type Settings = { on: boolean; compact: boolean; size: number; motion: Motion }
+let settings: Settings = { on: true, compact: false, size: 1, motion: 'on' }
+const MOTIONS: Motion[] = ['on', 'auto', 'off']
 const saveSettings = ($: Api) => $.store.set('settings', settings)
 
 // ---------- the mascot ----------
@@ -156,6 +157,7 @@ const paint = async ($: Api, draw = true) => {
     click,
     minis: agents,
     hint: '/clawd pack <folder> brings Clawd in',
+    motion: settings.motion,
   })
   shownKey = keyOf(now)
   if (draw) $.ui.invalidate('ui.render')
@@ -214,6 +216,7 @@ const HELP = [
   '/clawd compact: mascot only, no stats (again to bring them back)',
   `/clawd size ${SIZES.join(' | ')}: the mascot's size`,
   '/clawd pack <folder>: where the unzipped Claude Mascot Pack is',
+  '/clawd motion on | auto | off: always move, follow the OS reduced-motion setting, or stand still',
   '/clawd poke: say hi',
 ].join('\n')
 
@@ -272,11 +275,18 @@ export const register: Register = on => {
         if (hasPack()) await cue($, 'hello')
         return { text: packNote }
       }
+      case 'motion': {
+        if (!MOTIONS.includes(arg as Motion)) return { text: `Motion: ${MOTIONS.join(', ')} (now ${settings.motion}).` }
+        settings = { ...settings, motion: arg as Motion }
+        await saveSettings($)
+        await paint($)
+        return { text: arg === 'on' ? 'Clawd moves.' : arg === 'off' ? 'Clawd stands still.' : 'Clawd follows your OS reduced-motion setting.' }
+      }
       case 'poke':
         await cue($, 'click')
         return { text: 'Boop.' }
       default:
-        return { text: `clawd-bar: ${settings.on ? 'on' : 'off'}${settings.compact ? ', compact' : ''}, size ${settings.size}\n${packNote || 'Art not loaded yet.'}\n\n${HELP}` }
+        return { text: `clawd-bar: ${settings.on ? 'on' : 'off'}${settings.compact ? ', compact' : ''}, size ${settings.size}, motion ${settings.motion}\n${packNote || 'Art not loaded yet.'}\n\n${HELP}` }
     }
   })
 

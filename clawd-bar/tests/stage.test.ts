@@ -83,3 +83,10 @@ test('the 5-hour pace projects to the reset, and says when 100% comes first', ()
   expect(burnOf([{ t: now - 60_000, pct: 30 }], now, 40, reset)).toBe(null) // too little history
   expect(burnOf([{ t: now - 1_200_000, pct: 40 }], now, 40, reset)).toBe(null) // not rising
 })
+
+test('motion: on never hides the wandering mascot; auto defers to the OS; off is always still', () => {
+  const sc = plan(Math.random, 300, 800, 'idle', CUES.hobby)
+  expect(render(sc, 800, { motion: 'on' }).includes('#mover,.flash{display:none}')).toBe(false)
+  expect(render(sc, 800, { motion: 'auto' }).includes('@media (prefers-reduced-motion:reduce){#mover,.flash{display:none}')).toBe(true)
+  expect(render(sc, 800, { motion: 'off' }).includes('}#mover,.flash{display:none}')).toBe(true)
+})
