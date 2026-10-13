@@ -16,7 +16,7 @@ const H = stageH()
 let seed = 7
 const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647
 const now = Date.now()
-const W = 960
+const W = 1060
 const info = (working: boolean, extra: Record<string, unknown> = {}) => ({
   ctx: { pct: 42, tokens: 84000, window: 200000, max: 200000, compactAt: 167000, cats: ([['System prompt', 3000], ['System tools', 17000], ['MCP tools', 9000], ['Memory files', 4000], ['Skills', 3000], ['Messages', 48000]] as const).map(([name, tokens]) => ({ name, tokens })) },
   limits: [{ kind: 'five_hour', pct: 23, resetsAt: new Date(now + 8e6).toISOString() }, { kind: 'seven_day', pct: 82 }],
@@ -27,10 +27,10 @@ const info = (working: boolean, extra: Record<string, unknown> = {}) => ({
 // a scene that holds one pose at x, so a still capture shows it
 const hold = (pose: string, x: number, say?: string): Seg[] => [{ kind: 'pose', ms: 600_000, x0: x, x1: x, pose, ...(say ? { say } : {}) }]
 const bars: [string, string][] = [ // the first four are stills for docs/hero.png
-  ['Editing a file · the 5H pace runs ahead of the fill', render(hold('writing-software-code', 860, 'editing hud.ts'), W, { hud: hud(W, H, now, info(true, { flash: { text: '+12k', at: now - 900 } })) })],
-  ['Two subagents at work', render(hold('lab-science-testing', 830), W, { hud: hud(W, H, now, info(true)), minis: 2 })],
-  ['Waiting on you · past 90% the limit shows its reset', render(hold('it-depends-sign', 870, 'your call?'), W, { hud: hud(W, H, now, info(true, { waiting: true, limits: [{ kind: 'five_hour', pct: 93, resetsAt: new Date(now + 4.3e6).toISOString() }, { kind: 'seven_day', pct: 82 }], burn: null })) })],
-  ['Turn finished', render(hold('rocket-launch-success', 900, 'done · 95s'), W, { hud: hud(W, H, now, info(false)) })],
+  ['Editing a file · the 5H pace runs ahead of the fill', render(hold('writing-software-code', 980, 'editing hud.ts'), W, { hud: hud(W, H, now, info(true, { flash: { text: '+12k', at: now - 900 } })) })],
+  ['Two subagents at work', render(hold('lab-science-testing', 975), W, { hud: hud(W, H, now, info(true)), minis: 2 })],
+  ['Waiting on you · past 90% the limit shows its reset', render(hold('it-depends-sign', 995, 'your call?'), W, { hud: hud(W, H, now, info(true, { waiting: true, limits: [{ kind: 'five_hour', pct: 93, resetsAt: new Date(now + 4.3e6).toISOString() }, { kind: 'seven_day', pct: 82 }], burn: null })) })],
+  ['Turn finished', render(hold('rocket-launch-success', 1000, 'done · 95s'), W, { hud: hud(W, H, now, info(false)) })],
   ['Idle, wandering (live)', render(plan(r, 500, W, 'idle', CUES.hobby), W, { hud: hud(W, H, now, info(false)), hover: 'taking it easy', click: { pose: 'love-cloud-pixel', say: 'hi!' } })],
   ['Busy (live)', render(react(r, 'thinking-pixel-bubble', '…', 420, W, 'busy', WORK.edit), W, { hud: hud(W, H, now, info(true)), hover: 'editing hud.ts', click: { pose: 'happy-pixel-celebrating', say: 'boop!' } })],
 ]

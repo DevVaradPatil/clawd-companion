@@ -25,7 +25,7 @@ A 52px bar above the input box in the **Claude Code desktop app**. It has two la
 | `CTX` | Context window fill, as a bar split by **what** is filling it: messages, system tools, MCP tools, memory files, skills. A tick marks where **auto-compact** kicks in. After each turn, the change (`+12k`) floats up from the number. Hover for the token breakdown. |
 | `5H` | Your 5-hour usage limit, with your **pace**: a faint extension of the bar and a tick show where you'll be at the reset. The tooltip says "100% in ~40m" if you'll hit the limit first. |
 | `7D` | Your weekly limit. |
-| clock | ● counts how long the current turn has run. It turns **yellow and pulses faster when Claude is waiting on you** (a permission prompt or a question). ○ counts how long ago the last turn finished. |
+| clock | ● counts how long the current turn has run. It turns **yellow and pulses faster when Claude is waiting on you** (a permission prompt or a question). ○ `LAST 5m 12s` shows how long the last turn ran, so you can see how long a job took after it's done. |
 
 Every meter uses one colour rule: Claude orange, **yellow from 75%**, **red from 90%**. Past 90% a limit shows its reset countdown (`↻ 1h12m`) instead of the percentage, because that's the number you need then.
 

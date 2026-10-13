@@ -172,10 +172,11 @@ const clockSlot = (x: number, y: number, now: number, i: Info) => {
     return slot(x, slotW('clock'), y, title, dot + wheels(x + 14, y, now - i.turnAt, i.waiting ? C.yellow : '#ecebe6'))
   }
   if (i.endAt === null) return slot(x, 20, y, 'Ready: no turn has run in this session yet', `<circle cx="${x + 4}" cy="${y}" r="3.5" fill="none" stroke="${C.muted}" stroke-width="1.5"/>`)
+  // done: how long the last turn ran (42s, 5m 12s, 1h 20m), so a long job's length stays readable afterwards
   const title = `Last turn ran ${span(i.lastMs ?? 0)} and finished at ${new Date(i.endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
   return slot(x, slotW('clock'), y, title,
-    `<circle cx="${x + 4}" cy="${y}" r="3" fill="none" stroke="${C.muted}"/>` + wheels(x + 14, y, now - i.endAt, C.muted) +
-    `<text x="${(x + 14 + 7 * CW + 6).toFixed(1)}" y="${y + 4}" font-size="${LFS - 1}" letter-spacing="1" font-weight="600" ${SANS} fill="${C.faint}">AGO</text>`)
+    `<circle cx="${x + 4}" cy="${y}" r="3" fill="none" stroke="${C.muted}"/>` + label(x + 14, y, 'LAST') +
+    value(x + 14 + 38, y, span(i.lastMs ?? 0), C.text))
 }
 
 // Lays the slots out from the left. A narrow bar shortens all three meters alike first; past that the clock
