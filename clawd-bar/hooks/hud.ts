@@ -11,6 +11,7 @@ export type Info = {
   burn: Burn | null // the 5-hour window's pace, projected to its reset
   working: boolean
   waiting: boolean // Claude is blocked on the person (a permission prompt, a question)
+  nudge: string | null // a quiet wait, no dialog: what Claude waits for the person to do (a file, a key)
   turnAt: number // when the running turn began
   endAt: number | null // when the last turn ended
   lastMs: number | null // how long the last turn took
@@ -165,17 +166,20 @@ const wheels = (x: number, y: number, sinceMs: number, fill: string) => {
 }
 
 const clockSlot = (x: number, y: number, now: number, i: Info) => {
+  // a quiet wait: a yellow ring breathing slowly round the dot, so it reads differently from a dialog
+  const ring = i.nudge ? `<circle cx="${x + 4}" cy="${y}" r="6" fill="none" stroke="${C.yellow}" stroke-width="1.5"><animate attributeName="opacity" values="1;0.15;1" dur="2.4s" repeatCount="indefinite"/></circle>` : ''
+  const nudged = i.nudge ? `\nWaiting on you for ${i.nudge}: Claude is checking for it, no dialog will come` : ''
   if (i.working) {
-    const c = i.waiting ? C.yellow : C.clay
+    const c = i.waiting || i.nudge ? C.yellow : C.clay
     const dot = `<circle cx="${x + 4}" cy="${y}" r="3.5" fill="${c}"><animate attributeName="opacity" values="1;0.2;1" dur="${i.waiting ? 0.9 : 1.6}s" repeatCount="indefinite"/></circle>`
-    const title = i.waiting ? 'Waiting for you: Claude needs an answer or a permission' : 'Claude is working: time this turn has run'
-    return slot(x, slotW('clock'), y, title, dot + wheels(x + 14, y, now - i.turnAt, i.waiting ? C.yellow : '#ecebe6'))
+    const title = (i.waiting ? 'Waiting for you: Claude needs an answer or a permission' : 'Claude is working: time this turn has run') + nudged
+    return slot(x, slotW('clock'), y, title, ring + dot + wheels(x + 14, y, now - i.turnAt, i.waiting || i.nudge ? C.yellow : '#ecebe6'))
   }
   if (i.endAt === null) return slot(x, 20, y, 'Ready: no turn has run in this session yet', `<circle cx="${x + 4}" cy="${y}" r="3.5" fill="none" stroke="${C.muted}" stroke-width="1.5"/>`)
   // done: how long the last turn ran (42s, 5m 12s, 1h 20m), so a long job's length stays readable afterwards
-  const title = `Last turn ran ${span(i.lastMs ?? 0)} and finished at ${new Date(i.endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  const title = `Last turn ran ${span(i.lastMs ?? 0)} and finished at ${new Date(i.endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` + nudged
   return slot(x, slotW('clock'), y, title,
-    `<circle cx="${x + 4}" cy="${y}" r="3" fill="none" stroke="${C.muted}"/>` + label(x + 14, y, 'LAST') +
+    ring + `<circle cx="${x + 4}" cy="${y}" r="3" fill="${i.nudge ? C.yellow : 'none'}" stroke="${i.nudge ? C.yellow : C.muted}"/>` + label(x + 14, y, 'LAST') +
     value(x + 14 + 38, y, span(i.lastMs ?? 0), C.text))
 }
 

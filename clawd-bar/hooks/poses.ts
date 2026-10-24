@@ -127,3 +127,41 @@ export const HOBBY_LINES: Record<string, string[]> = {
 }
 export const WALK_LINES = ['out for a stroll', 'stretching my legs', 'patrolling the bar', 'pacing around', 'wandering', 'exploring']
 export const IDLE_LINES = ['taking it easy', 'ready when you are', 'daydreaming', 'humming a tune', 'counting pixels', 'enjoying the quiet', 'polishing pixels', 'admiring your code', 'snack break', 'waiting for ideas']
+
+// ---------- quiet waits: Claude is stuck on the person without a dialog ----------
+
+// What the person is being waited on for, in a few words, from any text that names it.
+export const needOf = (text: string): string => {
+  const t = text.toLowerCase()
+  if (/api[ _-]?key|token|secret|credential|password|\.env\b/.test(t)) return 'your API key'
+  if (/image|\.png|\.jpe?g|\.webp|\.gif|screenshot|photo|picture/.test(t)) return 'an image'
+  if (/download/.test(t)) return 'a download'
+  if (/log ?in|sign ?in|authori[sz]e|oauth/.test(t)) return 'you to sign in'
+  const file = text.match(/[\w./\-]+\.[a-z0-9]{1,5}\b/i)?.[0]
+  if (file) return file.split(/[\/]/).pop()!
+  return 'you'
+}
+
+// A tool call that waits for the person: a loop polling for a file, or a watcher armed for something they do.
+// Answers what it waits for, or null for ordinary work (a watcher on CI, a plain command).
+export const pollNeed = (tool: string, e: Record<string, unknown>): string | null => {
+  const cmd = str(e.command)
+  const desc = str(e.description)
+  const checksFile = /(\[\s*!?\s*-[efs]\s|test\s+-[efs]\s|Test-Path|existsSync|os\.path\.exists|\bexists\(|\bls\s)/.test(cmd)
+  if (tool === 'Monitor') {
+    const forYou = /\b(you|your|user|download|place|add|drop|upload|paste|provide|api key|token)\b/i.test(desc)
+    return checksFile || forYou ? needOf(`${desc} ${cmd}`) : null
+  }
+  if (/^(Bash|PowerShell)$/.test(tool)) {
+    const loops = /\b(until|while)\b/.test(cmd) && /\b(sleep|Start-Sleep|timeout)\b/.test(cmd)
+    return loops && checksFile ? needOf(cmd) : null
+  }
+  return null
+}
+
+// A finished turn whose last words hand the person a job ("add your key to .env and let me know").
+export const answerNeed = (answer: string): string | null => {
+  const tail = answer.slice(-600)
+  const asks = /(let me know (when|once)|once you('ve| have)|when you('ve| have)|after you('ve| have)|tell me when|ping me when|i'll wait|waiting (for|on) you|please (add|put|place|download|paste|set|create|upload|provide|drop|save|copy|move|run|sign in|log in)|you('ll)? need to (add|put|place|download|paste|set|create|upload|provide|drop|save|sign in|log in)|(add|paste|put) your )/i
+  return asks.test(tail) ? needOf(tail) : null
+}

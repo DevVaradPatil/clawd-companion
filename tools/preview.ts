@@ -20,7 +20,7 @@ const W = 1060
 const info = (working: boolean, extra: Record<string, unknown> = {}) => ({
   ctx: { pct: 42, tokens: 84000, window: 200000, max: 200000, compactAt: 167000, cats: ([['System prompt', 3000], ['System tools', 17000], ['MCP tools', 9000], ['Memory files', 4000], ['Skills', 3000], ['Messages', 48000]] as const).map(([name, tokens]) => ({ name, tokens })) },
   limits: [{ kind: 'five_hour', pct: 23, resetsAt: new Date(now + 8e6).toISOString() }, { kind: 'seven_day', pct: 82 }],
-  burn: { projected: 61, fullInMs: null, resetInMs: 8e6 }, waiting: false, flash: null as { text: string; at: number } | null,
+  burn: { projected: 61, fullInMs: null, resetInMs: 8e6 }, waiting: false, nudge: null as string | null, flash: null as { text: string; at: number } | null,
   working, turnAt: now - 83000, endAt: now - 724000, lastMs: 95000,
   ...extra,
 })

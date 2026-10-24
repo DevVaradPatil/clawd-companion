@@ -69,8 +69,10 @@ All 75 poses of the mascot pack are used.
 | uses a skill | wizard hat, ninja, glowing aura |
 | touches secrets or auth | padlock, shield, malware scanner |
 | asks you a question or waits on a permission | holds an "IT DEPENDS" sign and asks "your call?" |
+| waits on you without a dialog (polls for a file you must add, watches for your API key, or ends asking you to do something) | holds the sign saying what it needs ("needs your API key"), the clock grows a slow yellow ring, and a toast tells you once |
 | runs over 3 minutes | lifts a barbell, runs in loops |
 | finishes a turn | checkmark, rocket, trophy, celebration |
+| finishes a job of 10+ minutes | a bigger celebration ("done in 14m 20s!"), a toast, and the done chime if sound is on |
 | hits a tool error | error windows, confusion spiral, debugging |
 | gets denied, interrupted, or fails | padlock, broken heart, tears, dizzy |
 | compacts the context | sync arrows |
@@ -113,6 +115,8 @@ If the pack is somewhere else, run `/clawd pack <folder>` once. The first time, 
 | `/clawd size 1` · `1.5` · `2` | Clawd's size (the bar grows to fit) |
 | `/clawd pack <folder>` | Where the unzipped mascot pack is |
 | `/clawd motion on` · `auto` · `off` | Always move (default), follow your OS's reduced-motion setting, or stand still |
+| `/clawd sound on` · `off` · `test` | A soft chime when Claude starts waiting on you, and when a long job finishes (off by default) |
+| `/clawd stats` | Today with Claude, across all sessions: turns, time worked, longest job, tool calls by kind, time spent waiting on you, errors |
 | `/clawd poke` | Say hi |
 
 Settings are kept across sessions.
@@ -162,10 +166,13 @@ clawd-bar/            the mod
   hooks/compile.ts    pack SVGs → compact sprites
   hooks/stage.ts      scene planning and the SVG/SMIL compiler
   hooks/hud.ts        the stats layer
-  hooks/poses.ts      which poses mean what, and tool classification
+  hooks/poses.ts      which poses mean what, tool classification, quiet-wait detection
+  hooks/stats.ts      the daily tally behind /clawd stats
+  sounds/             the two chimes (synthesized by tools/make-sounds.py)
   tests/              plugin tests (claude plugin test clawd-bar)
 tools/
   preview.ts          renders the bar to an HTML page for quick iteration
+  make-sounds.py      synthesizes the chimes
 ```
 
 ## Customize

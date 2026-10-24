@@ -1,7 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 import { WALK_FROM, compilePack } from '../hooks/compile.ts'
-import { CUES, PACK_NAMES, WORK, classify } from '../hooks/poses.ts'
+import { CUES, PACK_NAMES, WORK, answerNeed, classify, pollNeed } from '../hooks/poses.ts'
 import { burnOf, hud, layout } from '../hooks/hud.ts'
+import { emptyDay, format, merge } from '../hooks/stats.ts'
 import { at, half, plan, react, render, setScale, usePack, type Mode } from '../hooks/stage.ts'
 
 // a stand-in for the pack (the real art is the person's own download): a 4-legged body made of pack-style rects
@@ -43,7 +44,7 @@ test('random scenes stay on the bar and compile to valid SMIL under the size cap
   const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647
   for (let i = 0; i < 120; i++) {
     setScale([1, 1.5, 2][i % 3]!)
-    const info = { ctx: { pct: 50, tokens: 1e5, window: 2e5, max: 2e5, compactAt: 1.6e5, cats: [{ name: 'Messages', tokens: 9e4 }] }, limits: [{ kind: 'five_hour', pct: 40 }], burn: { projected: 80, fullInMs: null, resetInMs: 6e6 }, working: true, waiting: i % 4 === 0, turnAt: 0, endAt: null, lastMs: null, flash: { text: '+12k', at: 4000 } }
+    const info = { ctx: { pct: 50, tokens: 1e5, window: 2e5, max: 2e5, compactAt: 1.6e5, cats: [{ name: 'Messages', tokens: 9e4 }] }, limits: [{ kind: 'five_hour', pct: 40 }], burn: { projected: 80, fullInMs: null, resetInMs: 6e6 }, working: true, waiting: i % 4 === 0, nudge: i % 5 === 0 ? 'your API key' : null, turnAt: 0, endAt: null, lastMs: null, flash: { text: '+12k', at: 4000 } }
     const width = 220 + Math.floor(r() * 1400)
     const mode = (['idle', 'busy', 'sleepy'] as Mode[])[i % 3]!
     const work = mode === 'sleepy' ? CUES.sleep : mode === 'busy' ? WORK.edit : CUES.hobby
@@ -97,4 +98,34 @@ test('each moment of a scene carries its own hover line', () => {
   expect(svg.includes('line 0') && svg.includes(`line ${sc.length - 1}`)).toBe(true)
   expect(svg.includes('fallback')).toBe(false)
   expect(render(plan(Math.random, 300, 800, 'idle', CUES.hobby), 800, { hover: 'fallback' }).includes('fallback')).toBe(true)
+})
+
+test('quiet waits: polling loops and watchers for the person, and turns that hand them a job', () => {
+  // a loop polling for a file the person must drop in
+  expect(pollNeed('Bash', { command: 'until [ -f assets/logo.png ]; do sleep 5; done' })).toBe('an image')
+  expect(pollNeed('PowerShell', { command: 'while (-not (Test-Path .env)) { Start-Sleep 3 }' })).toBe('your API key')
+  // a watcher armed for the person, and one that is not (CI)
+  expect(pollNeed('Monitor', { description: 'Wait for you to add the API key to .env', command: 'until grep -q KEY .env; do sleep 2; done' })).toBe('your API key')
+  expect(pollNeed('Monitor', { description: 'Watch the CI run', command: 'gh run watch 123' })).toBe(null)
+  // ordinary commands are work, not waits
+  expect(pollNeed('Bash', { command: 'npm test' })).toBe(null)
+  expect(pollNeed('Bash', { command: 'while read l; do echo $l; done < f.txt' })).toBe(null)
+  // a finished turn that hands over a job, and one that just reports
+  expect(answerNeed('Done wiring it up. Add your OpenAI API key to `.env` and let me know when it is there.')).toBe('your API key')
+  expect(answerNeed('Please download the hero image and place it in public/hero.png, then tell me.')).toBe('an image')
+  expect(answerNeed('All tests pass and the bar now shows the new clock.')).toBe(null)
+})
+
+test('stats: sessions add up, a new day starts over, and the summary reads well', () => {
+  const a = { ...emptyDay('2026-10-25'), turns: 2, workMs: 600_000, longestMs: 420_000, waitMs: 30_000, tools: { edit: 5, read: 3 } }
+  const b = { ...emptyDay('2026-10-25'), turns: 1, workMs: 120_000, longestMs: 120_000, errors: 1, tools: { edit: 2, bash: 4 } }
+  const day = merge(merge(undefined, a), b)
+  expect(day.turns).toBe(3)
+  expect(day.longestMs).toBe(420_000)
+  expect(day.tools).toEqual({ edit: 7, read: 3, bash: 4 })
+  expect(merge({ ...day, date: '2026-10-24' }, b).turns).toBe(1) // yesterday's record does not carry over
+  const text = format(day, '42% (84k of 200k)')
+  expect(text.includes('3 turns · 12m 0s of work · longest 7m 0s')).toBe(true)
+  expect(text.includes('14 tool calls: 7 edits · 4 commands · 3 reads')).toBe(true)
+  expect(text.includes('Waited on you: 30s')).toBe(true)
 })
