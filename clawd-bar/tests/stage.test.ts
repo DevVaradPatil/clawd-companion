@@ -90,3 +90,11 @@ test('motion: on never hides the wandering mascot; auto defers to the OS; off is
   expect(render(sc, 800, { motion: 'auto' }).includes('@media (prefers-reduced-motion:reduce){#mover,.flash{display:none}')).toBe(true)
   expect(render(sc, 800, { motion: 'off' }).includes('}#mover,.flash{display:none}')).toBe(true)
 })
+
+test('each moment of a scene carries its own hover line', () => {
+  const sc = plan(Math.random, 300, 800, 'idle', CUES.hobby).map((s, i) => ({ ...s, note: `line ${i}` }))
+  const svg = render(sc, 800, { hover: 'fallback' })
+  expect(svg.includes('line 0') && svg.includes(`line ${sc.length - 1}`)).toBe(true)
+  expect(svg.includes('fallback')).toBe(false)
+  expect(render(plan(Math.random, 300, 800, 'idle', CUES.hobby), 800, { hover: 'fallback' }).includes('fallback')).toBe(true)
+})

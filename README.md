@@ -1,22 +1,39 @@
 <div align="center">
 
-# clawd-bar
+# Clawd Companion
 
 **A tiny pixel Claude lives above your prompt and acts out whatever Claude Code is doing.**
 
 It shows context, usage limits and the turn clock at a glance, in one slim bar. Dark mode first, light mode supported.
 
-![clawd-bar: the mascot editing, testing with two subagent minis, waiting on you, and finishing a turn](docs/hero.png)
+[![GitHub stars](https://img.shields.io/github/stars/DevVaradPatil/clawd-companion?style=flat&color=d97757)](https://github.com/DevVaradPatil/clawd-companion/stargazers)
+[![License: MIT](https://img.shields.io/badge/license-MIT-c2c0b6)](LICENSE)
+![Claude Code desktop](https://img.shields.io/badge/Claude%20Code-desktop%20app-d97757)
 
-[Install](#install) · [What it reacts to](#what-it-reacts-to) · [Commands](#the-clawd-command) · [How it works](#how-it-works) · [Customize](#customize) · [Credits](#credits)
+![Clawd Companion: the mascot editing, testing with two subagent minis, waiting on you, and finishing a turn](docs/hero.png)
+
+[Quick start](#quick-start) · [What it reacts to](#what-it-reacts-to) · [Commands](#the-clawd-command) · [Troubleshooting](#troubleshooting) · [How it works](#how-it-works) · [Credits](#credits)
+
+**If Clawd makes your sessions a little nicer, a ⭐ helps other Claude Code users find it.**
 
 </div>
+
+## Quick start
+
+1. **Get the free art:** download the [Claude Mascot Pack](https://getillustrations.com/illustration-pack/claude-mascot-pack) and unzip it into your Downloads folder.
+2. **Install:** paste this into Claude Code:
+   ```text
+   Install clawd-bar for me from https://github.com/DevVaradPatil/clawd-companion, following its SETUP.md.
+   ```
+3. **Restart the Claude desktop app.** Clawd says hi above your prompt.
+
+Details, and a terminal alternative, are in [Install](#install) below.
 
 ---
 
 ## What you get
 
-A 52px bar above the input box in the **Claude Code desktop app**. It has two layers.
+The plugin is called `clawd-bar`: a 52px bar above the input box in the **Claude Code desktop app**. It has two layers.
 
 **Behind: the numbers.** Each slot has a fixed width so nothing jumps around. On a narrow window the three meters get shorter together; they're never dropped.
 
@@ -65,7 +82,7 @@ All 75 poses of the mascot pack are used.
 **You need** the Claude Code **desktop app** and the free mascot art.
 
 **1. Get the art.** Download the free **[Claude Mascot Pack](https://getillustrations.com/illustration-pack/claude-mascot-pack)** from GetIllustrations (no account needed).
-Unzip it into **Downloads**, **Desktop** or **Documents**. The mod finds it there on its own.
+Unzip it into **Downloads**, **Desktop** or **Documents**, keeping "claude" or "mascot" in the folder name. The mod finds it there on its own.
 The art isn't bundled here because its license doesn't allow redistributing the pack.
 
 **2. Install the plugin.** Either paste this into Claude Code:
@@ -102,6 +119,25 @@ Settings are kept across sessions.
 
 **Light mode and reduced motion.** The bar follows your system's light or dark appearance.
 With `/clawd motion auto`, Clawd stands still whenever your OS asks for reduced motion, and the floating numbers stay off. It isn't the default because Windows reports reduced motion whenever "Show animations" is off, which many people turn off for speed.
+
+## Updating
+
+```bash
+claude plugin update clawd-bar@clawd-companion
+```
+
+Then run `/reload-plugins` in any open session, or restart the app.
+
+## Troubleshooting
+
+| You see | Do this |
+| --- | --- |
+| No bar at all | Make sure you're in the **desktop app** (the terminal can't draw it). Set `"CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"` under `env` in `~/.claude/settings.json`, then fully quit the app (system tray too) and reopen it. |
+| `/clawd isn't a command here` | That session started before the install. Run `/reload-plugins`, or fully quit and reopen the app. |
+| The stats but no mascot, with "/clawd pack <folder>" | The art wasn't found. Run `/clawd pack <path to the unzipped pack>` once. |
+| An update doesn't show up | Claude Code runs an installed copy. Run `claude plugin update clawd-bar@clawd-companion`, then `/reload-plugins`. |
+| Clawd stands still | Run `/clawd motion on`. |
+| You want it gone for a while | `/clawd off` (and `/clawd on` to bring it back). |
 
 ## How it works
 
@@ -150,6 +186,11 @@ tools/
 - **Early-access API.** Mods use Claude Code's function-hooks API, which is early access and may change between releases.
 - **Usage limits need a subscription.** The 5h and 7d figures appear once the API reports them (Pro/Max plans). Until then the slots show `—`.
 
+## Contributing
+
+Ideas, new poses and fixes are welcome. Open an issue or a PR.
+`claude plugin test clawd-bar` runs the tests, and `node tools/preview.ts <pack folder> preview.html` renders the bar in a browser.
+
 ## Credits
 
 - **Illustrations:** the [**Claude Mascot Pack**](https://getillustrations.com/illustration-pack/claude-mascot-pack) by [**GetIllustrations.com**](https://getillustrations.com).
@@ -157,4 +198,10 @@ tools/
   If you like the art, check out their other pixel packs.
 - **Code:** MIT, see [LICENSE](LICENSE). That covers the code only, not the illustrations.
 
-clawd-bar is an unofficial fan project. It isn't affiliated with, endorsed by, or sponsored by Anthropic. "Claude" is a trademark of Anthropic, PBC.
+Clawd Companion is an unofficial fan project. It isn't affiliated with, endorsed by, or sponsored by Anthropic. "Claude" is a trademark of Anthropic, PBC.
+
+<div align="center">
+
+**Enjoying Clawd? [Give the repo a ⭐](https://github.com/DevVaradPatil/clawd-companion)** so more people can meet him.
+
+</div>

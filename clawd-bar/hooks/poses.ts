@@ -113,3 +113,17 @@ export const classify = (tool: string, e: Input): { mood: Mood; label: string } 
   if (tool.startsWith('mcp__')) return { mood: 'mcp', label: clip(tool.split('__').slice(1).join(' · '), 26) }
   return { mood: 'think', label: clip(tool.toLowerCase(), 26) }
 }
+
+// What a hover says while Clawd has nothing to do: a line per hobby pose, and a few for walking and pausing.
+export const HOBBY_LINES: Record<string, string[]> = {
+  'artboard-24cla': ['meditating', 'finding inner peace', 'om…'],
+  'planting-small-trees': ['planting trees', 'growing a forest'],
+  'holding-green-leaf': ['found a nice leaf', 'leaf collecting'],
+  'nature-growth-mushrooms': ['mushroom hunting', 'foraging'],
+  'growing-pixel-nature': ['gardening', 'tending the garden'],
+  'baking-steaming-pie': ['baking a pie', 'pie smells great'],
+  'artboard-25cla': ['hanging with friends', 'team huddle'],
+  'lifting-heavy-barbell': ['leg day', 'getting stronger'],
+}
+export const WALK_LINES = ['out for a stroll', 'stretching my legs', 'patrolling the bar', 'pacing around', 'wandering', 'exploring']
+export const IDLE_LINES = ['taking it easy', 'ready when you are', 'daydreaming', 'humming a tune', 'counting pixels', 'enjoying the quiet', 'polishing pixels', 'admiring your code', 'snack break', 'waiting for ideas']

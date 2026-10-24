@@ -27,7 +27,7 @@ export const stageH = () => H
 export const half = () => HALF
 const SPEED = 32 // walking, CSS px per second
 
-export type Seg = { kind: 'walk' | 'stand' | 'pose'; ms: number; x0: number; x1: number; pose?: string; say?: string }
+export type Seg = { kind: 'walk' | 'stand' | 'pose'; ms: number; x0: number; x1: number; pose?: string; say?: string; note?: string }
 export type Mode = 'idle' | 'busy' | 'sleepy'
 type Rng = () => number
 
@@ -72,9 +72,9 @@ export const plan = (r: Rng, from: number, width: number, mode: Mode, work: stri
 }
 
 // A reaction first (a pose held a moment, with a line), then the mode's usual life from the same spot.
-export const react = (r: Rng, pose: string, say: string | undefined, from: number, width: number, mode: Mode, work: string[], ms = 3200): Seg[] => {
+export const react = (r: Rng, pose: string, say: string | undefined, from: number, width: number, mode: Mode, work: string[], ms = 3200, note?: string): Seg[] => {
   const x = clampX(from, width)
-  return [{ kind: 'pose', ms, x0: x, x1: x, pose, ...(say ? { say } : {}) }, ...plan(r, x, width, mode, work)]
+  return [{ kind: 'pose', ms, x0: x, x1: x, pose, ...(say ? { say } : {}), ...(note ? { note } : {}) }, ...plan(r, x, width, mode, work)]
 }
 
 export const at = (scene: Seg[], t: number): number => {
@@ -126,7 +126,7 @@ const bubble = (text: string, left: boolean, y = 8) => {
 export type RenderOpts = {
   offsetMs?: number // how far into the scene this drawing starts
   hud?: string // the info row, CSS px markup drawn behind the mascot
-  hover?: string // what a hover over the mascot says
+  hover?: string // what a hover over the mascot says, for any segment without its own `note`
   click?: { pose: string; say: string } // what a click on it does
   minis?: number // subagents running: half-size mascots trailing it
   hint?: string // drawn in the mascot's place when there is no art yet
@@ -193,7 +193,16 @@ export const render = (scene: Seg[], width: number, opts: RenderOpts = {}): stri
 
   // hover: what it is up to; click: a hop, a reaction pose and a line, all inside the SVG
   const left = (scene[0]?.x0 ?? 0) > width / 2
-  const hover = opts.hover ? `<g opacity="0"><set attributeName="opacity" to="1" begin="clawd.mouseover" end="clawd.mouseout"/>${bubble(opts.hover, left, 2)}</g>` : ''
+  // the hover line belongs to the moment: each segment's own note (else opts.hover), shown while that segment
+  // runs AND the pointer is over the mascot (the two opacities multiply)
+  const onHover = (text: string) => `<g opacity="0"><set attributeName="opacity" to="1" begin="clawd.mouseover" end="clawd.mouseout"/>${bubble(text, left, 2)}</g>`
+  const hasNotes = scene.some(s => s.note)
+  const hover = !hasNotes
+    ? (opts.hover ? onHover(opts.hover) : '')
+    : scene.map((s, i) => {
+      const text = s.note ?? opts.hover
+      return text ? `<g opacity="0">${windowed(starts[i]!, starts[i]! + s.ms)}${onHover(text)}</g>` : ''
+    }).join('')
   const click = opts.click && SPRITES[opts.click.pose]
     ? `<g opacity="0"><set attributeName="opacity" to="1" begin="clawd.click" dur="2.4s"/>${art(SPRITES[opts.click.pose]!)}${bubble(opts.click.say, !left, 2)}</g>`
     : ''

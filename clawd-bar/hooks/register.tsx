@@ -1,6 +1,6 @@
 import type { Hook, Register } from 'claude-code'
 import { WALK_FROM, compilePack, type Pack } from './compile.ts'
-import { CUES, PACK_NAMES, SAY, WORK, classify, type Cue, type Mood } from './poses.ts'
+import { CUES, HOBBY_LINES, IDLE_LINES, PACK_NAMES, SAY, WALK_LINES, WORK, classify, type Cue, type Mood } from './poses.ts'
 import { DANGER, WARN, burnOf, hud, k, type Info, type Sample } from './hud.ts'
 import { at, busyMs, hasPack, pick, plan, react, render, setScale, stageH, usePack, type Mode, type Motion, type Seg } from './stage.ts'
 
@@ -16,7 +16,8 @@ const SLEEPY_AFTER_MS = 10 * 60_000
 const ERROR_COOLDOWN_MS = 5_000
 const RESTAGE_MS = 6_000 // the same mood keeps its scene at least this long between tool calls
 const LONG_TURN_MS = 3 * 60_000
-const WAIT_SHOW_MS = 1_500 // an ask that settles quicker (auto mode's classifier) never shows as waiting
+const WAIT_SHOW_MS = 400 // a dialog answered quicker than this never shows as waiting
+const REPAINT_MS = 1_500 // the hover line follows the newest tool at most this often
 const SIZES = [1, 1.5, 2]
 const PACK_URL = 'https://getillustrations.com/illustration-pack/claude-mascot-pack'
 const rng = Math.random
@@ -51,6 +52,10 @@ let windowSeen = '' // which 5-hour window those readings belong to (its reset t
 let agents = 0 // subagents running now
 let ctxBefore: number | null = null // the context's tokens when the turn began
 let waitTimer: { cancel: () => void } | null = null
+let waitingFor: string | null = null // the tool call a dialog is holding up
+const inFlight = new Map<string, string>() // running tool calls: tool_use_id -> tool name
+let lastLabel = 'thinking' // what Claude did last, for the hover once a wait ends
+let repaintTimer: { cancel: () => void } | null = null
 
 const work = () => (mode === 'sleepy' ? CUES.sleep : mode === 'busy' ? WORK[mood] : CUES.hobby)
 
@@ -163,12 +168,33 @@ const paint = async ($: Api, draw = true) => {
   if (draw) $.ui.invalidate('ui.render')
 }
 
+// The hover line for each moment of a scene: while busy, what Claude is doing; while idle, a line that fits
+// the pose, the walk or the pause, picked fresh each scene so it never says the same thing for long.
+const annotate = (sc: Seg[]): Seg[] =>
+  sc.map(s => {
+    if (s.note) return s
+    if (mode === 'busy') return { ...s, note: doing }
+    if (mode === 'sleepy') return { ...s, note: 'zzz…' }
+    const lines = s.kind === 'pose' && s.pose && HOBBY_LINES[s.pose] ? HOBBY_LINES[s.pose]! : s.kind === 'walk' ? WALK_LINES : IDLE_LINES
+    return { ...s, note: pick(rng, lines) }
+  })
+
+// Redraw soon so the hover follows the newest tool, without rebuilding on every call of a busy burst.
+const repaintSoon = ($: Api) => {
+  if (repaintTimer) return
+  repaintTimer = $.clock.after(REPAINT_MS, () => {
+    repaintTimer = null
+    scene = scene.map(s => (mode === 'busy' && !s.say ? { ...s, note: doing } : s))
+    void paint($)
+  })
+}
+
 // A new scene from wherever the mascot is now: a reaction first when given; the next scene is scheduled.
-const restage = async ($: Api, cue?: { pose: string; say?: string; ms?: number }, draw = true) => {
+const restage = async ($: Api, cue?: { pose: string; say?: string; ms?: number; note?: string }, draw = true) => {
   if (!stagePx) return
   const now = await $.clock.now()
   const here = scene.length ? at(scene, now - sceneAt) : 40 + rng() * (stagePx - 80)
-  scene = cue ? react(rng, cue.pose, cue.say, here, stagePx, mode, work(), cue.ms) : plan(rng, here, stagePx, mode, work())
+  scene = annotate(cue ? react(rng, cue.pose, cue.say, here, stagePx, mode, work(), cue.ms, cue.note) : plan(rng, here, stagePx, mode, work()))
   click = { pose: pick(rng, CUES.click), say: pick(rng, SAY.click!) }
   sceneAt = now
   stagedAt = now
@@ -179,21 +205,34 @@ const restage = async ($: Api, cue?: { pose: string; say?: string; ms?: number }
 
 const cue = ($: Api, c: Cue, say?: string, ms?: number) => restage($, { pose: pick(rng, CUES[c]), say: say ?? (SAY[c] ? pick(rng, SAY[c]!) : undefined), ms })
 
-// Claude is blocked on the person: shown once the wait outlasts WAIT_SHOW_MS; ends when the tool call returns
-const waitStart = ($: Api) => {
+// Claude is blocked on the person: a permission dialog or a question is on screen for tool call `id`.
+// Only the engine's own signal that a dialog is shown starts it (never a check auto mode settles by itself),
+// and it ends the moment that call moves on: it returns, it starts running (its progress row draws), the
+// turn ends, or the person sends a prompt.
+const waitStart = ($: Api, id: string | null) => {
+  waitingFor = id
   waitTimer?.cancel()
   waitTimer = $.clock.after(WAIT_SHOW_MS, () => {
+    if (waitingFor !== id) return
     info = { ...info, waiting: true }
     doing = 'waiting for you'
-    void restage($, { pose: pick(rng, WORK.ask), say: 'your call?', ms: 600_000 })
+    void restage($, { pose: pick(rng, WORK.ask), say: 'your call?', ms: 600_000, note: 'waiting for you' })
   })
 }
-const waitEnd = ($: Api) => {
+const waitEnd = ($: Api, id?: string) => {
+  if (id !== undefined && waitingFor !== null && id !== waitingFor) return
   waitTimer?.cancel()
   waitTimer = null
+  waitingFor = null
   if (!info.waiting) return
   info = { ...info, waiting: false }
+  doing = lastLabel
   void restage($)
+}
+// the tool call a dialog belongs to: the newest running call of that tool, else the newest of any
+const callOf = (toolName?: string) => {
+  const calls = [...inFlight].reverse()
+  return (calls.find(([, t]) => t === toolName) ?? calls[0])?.[0] ?? null
 }
 
 // the context's change over a stretch, floated once over the CTX number
@@ -291,9 +330,10 @@ export const register: Register = on => {
   })
 
   on('prompt.submit', async ($, e, next) => {
+    waitEnd($)
     mode = 'busy'
     mood = 'think'
-    doing = 'thinking'
+    doing = lastLabel = 'thinking'
     sleepy?.cancel()
     void restage($, { pose: pick(rng, WORK.think), say: '…', ms: 2400 })
     return next(e)
@@ -319,26 +359,34 @@ export const register: Register = on => {
   })
 
   on('tool.call', async ($, e, next) => {
-    const what = classify(String(e.tool), e as unknown as Record<string, unknown>)
-    const now = await $.clock.now()
-    if (mode !== 'sleepy' && (what.mood !== mood || now - stagedAt > RESTAGE_MS)) {
-      mode = 'busy'
-      mood = what.mood
-      doing = what.label
-      void restage($)
-    } else doing = what.label
     const tool = String(e.tool)
+    const id = String(e.tool_use_id)
+    const what = classify(tool, e as unknown as Record<string, unknown>)
+    const now = await $.clock.now()
+    inFlight.set(id, tool)
+    lastLabel = what.label
+    if (!info.waiting) {
+      doing = what.label
+      if (what.mood !== mood || mode !== 'busy' || now - stagedAt > RESTAGE_MS) {
+        // a new kind of work: strike its pose now and say what it is, then carry on from there
+        const changed = what.mood !== mood || mode !== 'busy'
+        mode = 'busy'
+        mood = what.mood
+        void restage($, { pose: pick(rng, WORK[mood]), ms: 4000, ...(changed ? { say: what.label } : {}) })
+      } else repaintSoon($)
+    }
     const isAgent = /^(Agent|Task)$/.test(tool) // ponytail: a background agent returns at once, so it shows only while launching
     if (isAgent) {
       agents++
       await paint($)
     }
-    if (/^(AskUserQuestion|ExitPlanMode)$/.test(tool)) waitStart($)
+    if (/^(AskUserQuestion|ExitPlanMode)$/.test(tool)) waitStart($, id)
     let ran
     try {
       ran = await next(e)
     } finally {
-      waitEnd($)
+      inFlight.delete(id)
+      waitEnd($, id)
       if (isAgent) {
         agents = Math.max(0, agents - 1)
         await paint($)
@@ -351,11 +399,20 @@ export const register: Register = on => {
     return ran
   })
 
-  // a permission prompt is coming when the verdict is `ask`; the tool.call hook above ends the wait
-  on('tool.check', async ($, e, next) => {
-    const verdict = await next(e)
-    if (verdict.decision === 'ask') waitStart($)
-    return verdict
+  // the engine is about to show a permission dialog: the one moment Claude is truly waiting on the person
+  on('classic.PermissionRequest', ($, e, next) => {
+    waitStart($, callOf(e.tool_name))
+    return next(e)
+  })
+  on('classic.Notification', ($, e, next) => {
+    if (/permission|elicitation/.test(e.notification_type)) waitStart($, callOf())
+    return next(e)
+  })
+  // a tool's progress row draws once it runs: whatever dialog held it was answered
+  on('ui.render', { component: 'ToolProgress' }, ($, e, next) => {
+    const id = e.props.tool_use_id
+    if (waitingFor === id) $.clock.after(0, () => waitEnd($, id))
+    return next(e)
   })
 
   on('session.compact', async ($, e, next) => {
@@ -386,7 +443,8 @@ export const register: Register = on => {
     flashFrom(ctxBefore, now)
     mode = 'idle'
     mood = 'think'
-    doing = 'taking it easy'
+    doing = pick(rng, IDLE_LINES)
+    inFlight.clear()
     settle($)
     const ctxHigh = (info.ctx?.pct ?? 0) >= WARN
     const limitHigh = info.limits.some(l => l.pct >= DANGER)
